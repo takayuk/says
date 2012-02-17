@@ -3,18 +3,17 @@
 # -*- encoding: utf-8 -*-
 # -*- coding: utf-8 -*-
 
-#import json
-#import site; site.addsitedir("python")
-#import patterns
-
 import sys
-#import glob
 import re
-import networkx
-import copy
+import site; site.addsitedir("python")
+import json
+
+import patterns
+
+from Corpus import Corpus
 
 
-def regid(table, key):
+def getid(table, key):
     try:
         id = table[key]
     except KeyError:
@@ -30,11 +29,78 @@ def countup(table, key):
         table[key] = 1
 
 
-def mcc(graph):
+def getwords(self, text, N=3):
+
+    for tag in patterns.hashtag_pat.findall(text):
+        text = unicode( re.sub(tag, "", text) )
+    
+    for url in patterns.url_short_pat.findall(text):
+        text = unicode( re.sub(url, "", text) )
+    
+    for name in patterns.name_pat.findall(text):
+        text = unicode( re.sub(name, "", text) )
+
+    words = []
+    for sent in patterns.delim_pat.split(text):
+        tok = patterns.word_pat.findall(unicode(sent))
+
+        for n in range(1, N+1):
+            for i in range(len(tok)+1-n):
+                ngram = tok[i:(i+n)]
+                ngram_str = "".join(ngram)
+                words.append(ngram_str)
+
+    return words
+
+
+def main2():
+    corpus = {}
+    
+    db = Corpus(database="sanal", collection=sys.argv[1])
+    query = {}
+    for i, item in enumerate(db.find(query)):
+
+        text = item["text"]
+        words = getwords(unicode(text))
+
+        wordsd = {}
+        for w in words:
+            countup(wordsd, w)
+
+        doc = { "text": wordsd, "id": item["id"] }
+        #u = item["user"]["screen_name"]
+        u = item["screen_name"]
+
+        try:
+            corpus[u].append(doc)
+        except KeyError:
+            corpus[u] = [ doc ]
+    
+        print(i)
+
+
+    with file(sys.argv[2], "w") as opened:
+        for k, v in corpus.items():
+            opened.write("%s\n" % json.dumps({k: v}))
+
+
+def getbigraph(pairs_seq):
+   
+    graph = networkx.DiGraph()
+    graph.add_edges_from(pairs_seq)
+
+    bigraph = networkx.Graph()
+    for u in graph.nodes():
+        for v in graph.neighbors(u):
+            if u in graph.neighbors(v):
+                bigraph.add_edge(u, v)
+
+
+def getmcc(graph):
 
     mcc_graph = copy.deepcopy(graph)
     cc = networkx.connected_components(graph)
-    mcomp = sorted([ (i, len(comp)) for i, comp in enumerate(cc) ], key = lambda x:x[1], reverse=True)[0]
+    mcomp = sorted([ (i, len(comp)) for i, comp in enumerate(cc) ], key=lambda x:x[1], reverse=True)[0]
 
     for i, comp in enumerate(cc):
         if i != mcomp[0]:
