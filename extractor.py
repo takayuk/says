@@ -95,6 +95,8 @@ def getbigraph(pairs_seq):
             if u in graph.neighbors(v):
                 bigraph.add_edge(u, v)
 
+    return bigraph
+
 
 def getmcc(graph):
 
