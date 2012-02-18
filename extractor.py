@@ -29,7 +29,7 @@ def countup(table, key):
         table[key] = 1
 
 
-def getwords(self, text, N=3):
+def getwords(text, N=3):
 
     for tag in patterns.hashtag_pat.findall(text):
         text = unicode( re.sub(tag, "", text) )
