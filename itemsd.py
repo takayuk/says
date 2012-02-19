@@ -67,16 +67,24 @@ def friends_of(user, api):
 def useritems(db, screen_name):
 
     try:
-        latestitem = [ x for x
-                in users_db.findsorted(query={ "screen_name": screen_name }, sortkey="id") ][0]
+        #latestitem = db.findsorted(query={ "screen_name": screen_name }, key="id", reverse=True)[0]
+        latestitem = db.findsorted(query={ "screen_name": screen_name }, key="id")[0]
         since_id = latestitem["id"]
 
+        itemcount = 0
         for res in api.user_timeline(id=screen_name, since_id=since_id):
             db.append(response_to_item(res))
+            itemcount += 1
 
-    except IndexError:
+        logging("%s %d added" % (screen_name, itemcount))
+
+    except:
+        itemcount = 0
         for res in api.user_timeline(id=screen_name, count=50):
             db.append(response_to_item(res))
+            itemcount += 1
+        
+        logging("%s %d added" % (screen_name, itemcount))
 
 
 def parse_args():
@@ -84,7 +92,7 @@ def parse_args():
     usage = "[--interval] [interval] [-l] [path-to-log]"
    
     parser = argparse.ArgumentParser(description="says")
-    parser.add_argument("--interval", type=int, default=1)
+    parser.add_argument("--interval", type=float, default=1.0)
     parser.add_argument("-l", "--log", default=".log/log")
 
     args = parser.parse_args()
@@ -112,8 +120,11 @@ if __name__ == "__main__":
             
             logging("%s updated" % v)
 
-            req_remain = api.rate_limit_status()["remaining_hits"]
-            logging("API request limit: %d" % req_remain)
+            try:
+                req_remain = api.rate_limit_status()["remaining_hits"]
+                logging("API request limit: %d" % req_remain)
+            except tweepy.error.TweepError:
+                continue
         
             time.sleep(args.interval)
 

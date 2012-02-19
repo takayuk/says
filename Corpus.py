@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import pymongo
 from pymongo import Connection
 import bson
 import traceback
@@ -38,9 +39,15 @@ class Corpus(object):
             print(e.message)
 
 
-    def find(self, queries = None):
+    def find(self, query={}):
 
-        return self.collection.find(queries)
+        return self.collection.find(query)
+    
+    
+    def findsorted(self, query={}, key="", reverse=False, count=1):
+
+        order = pymongo.ASCENDING if reverse else pymongo.DESCENDING
+        return self.collection.find(query).sort(key, order).limit(count)
 
 
     def update(self, record, new_record):
@@ -52,15 +59,11 @@ class Corpus(object):
                     % (str(self.__class__.__name__), traceback.extract_stack()[-1][2], e.message))
 
 
-    def exists(self, queries):
+    def exists(self, query):
 
-        find_count = 0
-        for attr, value in queries.items():
-            result = self.find({ attr: value })
-            find_count += len(result)
-
-        return find_count > 0
-
+        for item in self.collection.find(query):
+            return True
+        return False
 
     def remove(self, item):
         
