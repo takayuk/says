@@ -59,6 +59,16 @@ def response_to_item(response):
     return item
         
 
+def getlimits_api(api):
+    
+    try:
+        req_remain = api.rate_limit_status()["remaining_hits"]
+    except tweepy.error.TweepError:
+        req_remain = -1
+
+    return req_remain
+
+
 def friends_of(user, api):
 
     return set([ g.screen_name for g
@@ -80,17 +90,23 @@ def useritems(db, screen_name):
 
 def getmessages(db, items):
 
+    replied_users = set([])
+
     for item in items:
         for reply_item in extractd.getmessages(item):
 
-            v = reply_item[1]
-            try:
-                v_items = useritems(db, v)
-            except tweepy.error.TweepError:
-                continue
+            if reply_item[0] != reply_item[1]:
+                replied_users.add( reply_item[1] )
+    
+    for v in replied_users:
+        try:
+            v_items = useritems(db, v)
+        except tweepy.error.TweepError:
+            continue
 
-            for item in v_items: db.append(item)
-            logging( "%s updated (%d items added)" % (v, len(v_items)) )
+        for item in v_items: db.append(item)
+        logging( "%s updated (%d items added)" % (v, len(v_items)) )
+        logging( "\t%d remains" % getlimits_api(api))
 
 
 def getitems(users, api, db):
@@ -109,15 +125,10 @@ def getitems(users, api, db):
 
             for item in items: db.append(item)
             logging( "%s updated (%d items added)" % (v, len(items)) )
+            logging( "\t%d remains" % getlimits_api(api))
             
             getmessages(db, items)
 
-            try:
-                req_remain = api.rate_limit_status()["remaining_hits"]
-                logging("API request limit: %d" % req_remain)
-            except tweepy.error.TweepError:
-                continue
-      
             time.sleep(args.interval)
 
 

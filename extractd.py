@@ -77,7 +77,10 @@ def getmessages(item):
 
     u, text = item["screen_name"], unicode(item["text"])
     for v in patterns.name_pat.findall(text):
-        messages.append(( u, re.sub(u"@", u"", v), item["created_at"], item["id"] ))
+        
+        v_name = re.sub(u"@", u"", v)
+        if len(v_name) > 2:
+            messages.append(( u, v_name, item["created_at"], item["id"] ))
 
     return messages
 
