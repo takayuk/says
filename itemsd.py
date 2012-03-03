@@ -18,6 +18,7 @@ import extractd
 import site; site.addsitedir("tweepy")
 import tweepy
 
+
 def logging(message):
     """ Given log-message, logging to specified output stream.
     """
@@ -64,59 +65,59 @@ def friends_of(user, api):
         in tweepy.Cursor(api.friends, id=user).items() ])
 
 
-def useritems(db, screen_name, users_2nd):
+def useritems(db, screen_name):
 
     try:
         latestitem = db.findsorted(query={ "screen_name": screen_name }, key="id")[0]
         since_id = latestitem["id"]
-
-        itemcount = 0
-        for res in api.user_timeline(id=screen_name, since_id=since_id):
-           
-            item = response_to_item(res)
-            
-            db.append(item)
-            
-            for v in extractd.getmessages(item):
-                users_2nd.append(v[1])
-
-            itemcount += 1
-
-        logging("%s %d added" % (screen_name, itemcount))
-
-    except:
-        itemcount = 0
-        for res in api.user_timeline(id=screen_name, count=50):
-
-            item = response_to_item(res)
-            db.append(item)
-
-            for v in extractd.getmessages(item):
-                users_2nd.append(v[1])
-
-            itemcount += 1
         
-        logging("%s %d added" % (screen_name, itemcount))
+        return [ response_to_item(res) for res
+                in api.user_timeline(id=screen_name, since_id=since_id) ]
+    except:
+        return [ response_to_item(res) for res
+                in api.user_timeline(id=screen_name, count=50) ]
 
 
-def getitems(users, users_2nd, api, db):
-    
-    for u in users:
-        #for v in friends_of(u["screen_name"], api):
-        for v in friends_of(u, api):
+def getmessages(db, items):
+
+    for item in items:
+        for reply_item in extractd.getmessages(item):
+
+            v = reply_item[1]
             try:
-                useritems(items_db, v, users_2nd)
+                v_items = useritems(db, v)
             except tweepy.error.TweepError:
                 continue
+
+            for item in v_items: db.append(item)
+            logging( "%s updated (%d items added)" % (v, len(v_items)) )
+
+
+def getitems(users, api, db):
+    
+    for u in users:
+        try:
+            gamma_u = friends_of(u, api)
+        except tweepy.error.TweepError:
+            continue
+
+        for v in gamma_u:
+            try:
+                items = useritems(items_db, v)
+            except tweepy.error.TweepError:
+                continue
+
+            for item in items: db.append(item)
+            logging( "%s updated (%d items added)" % (v, len(items)) )
             
-            logging("%s updated" % v)
+            getmessages(db, items)
 
             try:
                 req_remain = api.rate_limit_status()["remaining_hits"]
                 logging("API request limit: %d" % req_remain)
             except tweepy.error.TweepError:
                 continue
-       
+      
             time.sleep(args.interval)
 
 
@@ -146,10 +147,5 @@ if __name__ == "__main__":
 
     items_db = Corpus(database=dbinfo["db"], collection=dbinfo["items"])
 
-    users_2nd, users_3rd = [], []
-    getitems(users, users_2nd, api, items_db)
-
-    users_2nd = set(users_2nd)
-    logging("%d unknown users" % len(users_2nd))
-    getitems(users_2nd, users_3rd, api, items_db)
+    getitems(users, api, items_db)
 
