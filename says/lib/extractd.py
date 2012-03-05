@@ -11,7 +11,7 @@ import json
 import patterns
 
 from Corpus import Corpus
-
+import networkx
 
 def getid(table, key):
     try:
@@ -45,9 +45,9 @@ def geturls(item):
     return urls
 
 
-def getngram(item, N=3):
+def getngram(text, N=3):
 
-    text = unicode(item["text"])
+    text = unicode(text)
 
     for tag in patterns.hashtag_pat.findall(text):
         text = unicode( re.sub(tag, "", text) )
@@ -128,6 +128,16 @@ def getbigraph(pairs_seq):
                 bigraph.add_edge(u, v)
 
     return bigraph
+
+
+def ccd(graph):
+
+    xgraph = networkx.Graph()
+    for u in graph:
+        for v in graph[u]:
+            xgraph.add_edge(u, v)
+
+    return networkx.connected_components(xgraph)
 
 
 def getmcc(graph):
