@@ -16,13 +16,9 @@ from pit import Pit
 from datetime import datetime
 import time
 import re
-#import memcache
 
 
 if __name__ == '__main__':
-
-    #mc = memcache.Client('localhost:11211')
-    #mc.flush_all()
 
     dbinfo = Pit.get("says")
     db = Corpus(database=dbinfo["db"], collection=dbinfo["items"])
@@ -38,14 +34,20 @@ if __name__ == '__main__':
         except KeyError:
             itemsd[i["screen_name"]] = [ i ]
 
+
     urltable = {}
-
     for item in items:
-        extitem = extcorpusd.getitem_fromurl(item)
-        extractd.countup(urltable, extitem.url)
+        for url in extractd.geturls(item):
+            extractd.countup(urltable, url)
 
-    for url in sorted(urltable.items(), key=lambda x:x[1], reverse=True):
-        print("%s\t%d" % (url[0], url[1]))
+    dbext = Corpus(database=dbinfo['db'], collection=dbinfo['externitems'])
+
+    subseq = extcorpusd.splitseq( urltable.keys(), count=10 )
+    threads = [ extcorpusd.ExternURLOpener(s, dbext, 0.2) for s in subseq ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
     exit()
 
@@ -74,5 +76,4 @@ if __name__ == '__main__':
 
         hotwords = [ hw[0] for hw in sorted(words, key=lambda x:x[1], reverse=True)[:20] ]
 
-        #mc.set(str(cid), hotwords)
 
