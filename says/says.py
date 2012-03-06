@@ -4,6 +4,8 @@
 # -*- coding: utf-8 -*-
 
 import site; site.addsitedir('lib')
+import extractd
+import extcorpusd
 
 from Corpus import Corpus
 import feature
@@ -13,20 +15,20 @@ import subgraph
 from pit import Pit
 from datetime import datetime
 import time
-
-import memcache
+import re
+#import memcache
 
 
 if __name__ == '__main__':
 
-    mc = memcache.Client('localhost:11211')
-    mc.flush_all()
+    #mc = memcache.Client('localhost:11211')
+    #mc.flush_all()
 
     dbinfo = Pit.get("says")
     db = Corpus(database=dbinfo["db"], collection=dbinfo["items"])
 
     t_end = time.mktime( datetime.today().timetuple() )
-    t_begin = t_end - 24 * 60 * 60
+    t_begin = t_end - (24 * 60 * 60 * 3)
     
     items = [ item for item in db.find({'created_at': { '$gt': t_begin, '$lt': t_end }}) ]
     itemsd = {}
@@ -35,6 +37,17 @@ if __name__ == '__main__':
             itemsd[i["screen_name"]].append(i)
         except KeyError:
             itemsd[i["screen_name"]] = [ i ]
+
+    urltable = {}
+
+    for item in items:
+        extitem = extcorpusd.getitem_fromurl(item)
+        extractd.countup(urltable, extitem.url)
+
+    for url in sorted(urltable.items(), key=lambda x:x[1], reverse=True):
+        print("%s\t%d" % (url[0], url[1]))
+
+    exit()
 
 
     global_df = feature.getdf_from(items)
@@ -61,5 +74,5 @@ if __name__ == '__main__':
 
         hotwords = [ hw[0] for hw in sorted(words, key=lambda x:x[1], reverse=True)[:20] ]
 
-        mc.set(str(cid), hotwords)
+        #mc.set(str(cid), hotwords)
 
