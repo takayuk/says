@@ -132,13 +132,26 @@ def getbigraph(pairs_seq):
 
 def ccd(graph):
 
+    ccomps = networkx.connected_components(graph)
+
+    subgraphs = []
+    for ccomp in ccomps:
+        subgraph = networkx.Graph()
+        
+        for u in ccomp:
+            subgraph.add_edges_from(graph.edges(u, data=True))
+
+        subgraphs.append(subgraph)
+
+    return subgraphs
+    """
     xgraph = networkx.Graph()
     for u in graph:
         for v in graph[u]:
             xgraph.add_edge(u, v)
 
     return networkx.connected_components(xgraph)
-
+    """
 
 def getmcc(graph):
 
