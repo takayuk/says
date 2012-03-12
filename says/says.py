@@ -35,6 +35,7 @@ if __name__ == '__main__':
             itemsd[i["screen_name"]] = [ i ]
 
 
+    """
     urltable = {}
     for item in items:
         for url in extractd.geturls(item):
@@ -48,9 +49,7 @@ if __name__ == '__main__':
         t.start()
     for t in threads:
         t.join()
-
-    exit()
-
+    """
 
     global_df = feature.getdf_from(items)
 
