@@ -55,7 +55,13 @@ def response_to_item(response):
     item["created_at"] = int(time.mktime( response.created_at.timetuple() ))
     
     item["screen_name"] = response.author.screen_name
+    item["profile_image_url"] = response.author.profile_image_url
+    item["friends_count"] = response.author.friends_count
+    item["followers_count"] = response.author.followers_count
 
+    item["in_reply_to_screen_name"] = response.in_reply_to_screen_name
+    item["in_reply_to_status_id"] = response.in_reply_to_status_id
+    
     return item
         
 
