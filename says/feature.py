@@ -17,6 +17,7 @@ from Corpus import Corpus
 import extractd
 import utils
 import patterns
+import bagofwords as bow
 
 
 def logging(message):
@@ -50,6 +51,7 @@ def feature(t_begin, t_end, screen_names):
         query = { 'created_at': { '$gt': t_begin, '$lt': t_end }, 'screen_name': u }
         for item in db.find(query):
             text = item['text']
+            id = item['id']
 
             try:
                 replied_id = item['in_reply_to_status_id']
@@ -59,7 +61,13 @@ def feature(t_begin, t_end, screen_names):
                 
             except KeyError:
                 pass
-            
+
+            """
+            feats = bow.bagofwords(text)
+            for f in feats:
+                print(' '.join(f))
+            continue
+            """
             feat = extractd.getngram(text)
             for w in set(feat):
                 if len(unicode(w)) < 2:
@@ -73,9 +81,11 @@ def feature(t_begin, t_end, screen_names):
                 
                 utils.count(ngram[w], u)
                 try:
-                    table[w].append(text)
+                    #table[w].append(text)
+                    table[w].add(id)
                 except KeyError:
-                    table[w] = [ text ]
+                    #table[w] = [ text ]
+                    table[w] = set([ id ])
 
             tags = extractd.gethashtags(item)
             for t in set(tags):
@@ -83,9 +93,11 @@ def feature(t_begin, t_end, screen_names):
                 
                 utils.count(ngram[t], u)
                 try:
-                    table[t].append(text)
+                    #table[t].append(text)
+                    table[t].add(id)
                 except KeyError:
-                    table[t] = [ text ]
+                    #table[t] = [ text ]
+                    table[t] = set([ id ])
 
             urls = extractd.geturls(item)
             for l in set(urls):
@@ -93,9 +105,11 @@ def feature(t_begin, t_end, screen_names):
 
                 utils.count(ngram[l], u)
                 try:
-                    table[l].append(text)
+                    #table[l].append(text)
+                    table[l].add(id)
                 except KeyError:
-                    table[l] = [ text ]
+                    #table[l] = [ text ]
+                    table[l] = set([ id ])
 
         print('%d/%d' % (j, len(screen_names)))
     return ngram, table
@@ -145,20 +159,16 @@ if __name__ == "__main__":
 
         hot[w] = math.log( float(f_w_t) / f_w_y )
 
-    """
-    with file('W_t_%03d' % cid, 'w') as opened:
-        opened.write('\n'.join([ w for w in w_t ]))
-    
-    with file('W_y_%03d' % cid, 'w') as opened:
-        opened.write('\n'.join([ w for w in w_y ]))
-    """
-    
-    with file('Y_%03d' % cid, 'w') as opened:
+    with file('temp/Y_%03d' % cid, 'w') as opened:
         for w in sorted(hot.items(), key=lambda x:x[1], reverse=True):
 
+            if w[1] < 1.7: break
+
             opened.write('!!! %s\t%d\t%d\t%f\n' % (w[0], len(w_y.get(w[0], [])), len(w_t[w[0]]), w[1]))
+            opened.write('\n'.join([ str(id) for id in w[0] ]))
+            """
             opened.write('\n'.join(table_y.get(w[0], [''])))
             opened.write('\n#############\n')
             opened.write('\n'.join(table_t[w[0]]))
             opened.write('\n---\n')
-
+            """

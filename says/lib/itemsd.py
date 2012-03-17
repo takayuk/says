@@ -94,15 +94,17 @@ def useritems(db, screen_name):
                 in api.user_timeline(id=screen_name, count=50) ]
 
 
-def getmessages(db, items):
+def getmessages(db, items, checkedusers):
 
     replied_users = set([])
 
     for item in items:
         for reply_item in extractd.getmessages(item):
 
-            if reply_item[0] != reply_item[1]:
-                replied_users.add( reply_item[1] )
+            if reply_item[0] == reply_item[1]: continue
+            if reply_item[1] in checkedusers: continue
+            
+            replied_users.add( reply_item[1] )
     
     for v in replied_users:
         try:
@@ -116,7 +118,8 @@ def getmessages(db, items):
 
 
 def getitems(users, api, db):
-    
+
+    checkedusers = set([])
     for u in users:
         try:
             gamma_u = friends_of(u, api)
@@ -124,6 +127,7 @@ def getitems(users, api, db):
             continue
 
         for v in gamma_u:
+            if v in checkedusers: continue
             try:
                 items = useritems(items_db, v)
             except tweepy.error.TweepError:
@@ -132,8 +136,9 @@ def getitems(users, api, db):
             for item in items: db.append(item)
             logging( "%s updated (%d items added)" % (v, len(items)) )
             logging( "\t%d remains" % getlimits_api(api))
+            checkedusers.add(v)
             
-            getmessages(db, items)
+            getmessages(db, items, checkedusers)
 
             time.sleep(args.interval)
 
@@ -162,7 +167,8 @@ if __name__ == "__main__":
 
     api = activate_api()
 
-    items_db = Corpus(database=dbinfo["db"], collection=dbinfo["items"])
+    postfix = datetime.now().strftime('%Y%m%d')
+    items_db = Corpus(database=dbinfo["db"] + postfix, collection=dbinfo["items"])
 
     getitems(users, api, items_db)
 
